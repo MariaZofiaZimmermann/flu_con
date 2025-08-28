@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Countdown Experiment (Images)</title>
+
+  <!-- jsPsych core + plugins (v6.3.1) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/jspsych.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/plugins/jspsych-preload.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/jspsych@6.3.1/css/jspsych.css" rel="stylesheet" />
+
+  <style>
+    img.stim { width: 800px; max-width: 90%; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto; }
+    .countdown { font-size: 64px; text-align: center; margin-top: 30px; }
+    .end-text  { font-size: 32px; text-align: center; margin-top: 30px; }
+    .final-text{ font-size: 48px; text-align: center; margin-top: 30px; }
+    .center    { text-align: center; }
+    button     { font-size: 24px; padding: 10px 25px; }
+  </style>
+</head>
+<body></body>
+
+<script>
+/* ======= CONFIG ======= */
+var USE_BEEPS = false; // set true only if beep.mp3 & double_beep.mp3 exist next to index.html
+
+// Filenames (adjust if yours differ)
+var FILES = {
+  testImage: 'test_image1.jpeg',
+  startImage: 'start_exp_image.jpeg',
+  exp1: 'exp_image1.jpeg',
+  exp2: 'exp_image2.jpeg',
+  exp3: 'exp_image3.jpeg',
+  beep: 'beep.mp3',
+  doubleBeep: 'double_beep.mp3'
+};
+
+var timeline = [];
+
+/* ======= PRELOAD ======= */
+timeline.push({
+  type: 'preload',
+  images: [FILES.testImage, FILES.startImage, FILES.exp1, FILES.exp2, FILES.exp3],
+  audio: USE_BEEPS ? [FILES.beep, FILES.doubleBeep] : [],
+  continue_after_error: false
+});
+
+/* ======= FLOW (mirrors your original) ======= */
+
+// START button (begin)
+timeline.push({
+  type: 'html-keyboard-response',
+  stimulus:
+    '<div class="center">' +
+      '<button onclick="jsPsych.finishTrial()">START</button>' +
+    '</div>',
+  choices: jsPsych.NO_KEYS
+});
+
+// "Test image" (replaces test_video.mp4) — auto-advance on image end? No video, so self-paced START:
+timeline.push({
+  type: 'html-keyboard-response',
+  stimulus:
+    '<div class="center">' +
+      '<img class="stim" src="' + FILES.testImage + '" alt="test image" />' +
+      '<br />' +
+      '<button onclick="jsPsych.finishTrial()">START</button>' +
+    '</div>',
+  choices: jsPsych.NO_KEYS
+});
+
+// 15-second countdown (15 → 0)
+for (var i = 15; i >= 0; i--) {
+  timeline.push({
+    type: 'html-keyboard-response',
+    stimulus: '<div class="countdown">' + i + '</div>',
+    choices: jsPsych.NO_KEYS,
+    trial_duration: 1000
+  });
+}
+
+// After 15s countdown – show KONIEC CZASU (smaller, no button) for 2s
+timeline.push({
+  type: 'html-keyboard-response',
+  stimulus: '<div class="end-text">KONIEC CZASU</div>',
+  choices: jsPsych.NO_KEYS,
+  trial_duration: 2000
+});
+
+// Helper to add an "experimental image" + 60s timer + (optional) beeps + end screen
+function addExpBlock(imageFile, isFinal) {
+  // (Your original had an exp video, then timer; here we show the image throughout the timer)
+
+  // First second: optional beep + image + "60"
+  var startBeep = USE_BEEPS
+    ? '<audio autoplay><source src="' + FILES.beep + '" type="audio/mpeg"></audio>'
+    : '';
+
+  timeline.push({
+    type: 'html-keyboard-response',
+    stimulus:
+      '<div class="center">' +
+        startBeep +
+        '<img class="stim" src="' + imageFile + '" alt="experimental image" />' +
+        '<div class="countdown">60</div>' +
+      '</div>',
+    choices: jsPsych.NO_KEYS,
+    trial_duration: 1000
+  });
+
+  // Remaining 59 → 0 seconds with the image visible
+  for (var s = 59; s >= 0; s--) {
+    timeline.push({
+      type: 'html-keyboard-response',
+      stimulus:
+        '<div class="center">' +
+          '<img class="stim" src="' + imageFile + '" alt="experimental image" />' +
+          '<div class="countdown">' + s + '</div>' +
+        '</div>',
+      choices: jsPsych.NO_KEYS,
+      trial_duration: 1000
+    });
+  }
+
+  // End screens
+  if (!isFinal) {
+    var dblBeep = USE_BEEPS
+      ? '<audio autoplay><source src="' + FILES.doubleBeep + '" type="audio/mpeg"></audio>'
+      : '';
+    timeline.push({
+      type: 'html-keyboard-response',
+      stimulus:
+        '<div class="center">' +
+          dblBeep +
+          '<div class="end-text">KONIEC CZASU</div>' +
+          '<div style="margin-top: 20px;">' +
+            '<button onclick="jsPsych.finishTrial()">DALEJ</button>' +
+          '</div>' +
+        '</div>',
+      choices: jsPsych.NO_KEYS
+    });
+  } else {
+    timeline.push({
+      type: 'html-keyboard-response',
+      stimulus: '<div class="final-text">KONIEC</div>',
+      choices: jsPsych.NO_KEYS,
+      trial_duration: 3000
+    });
+  }
+}
+
+// "Start exp" screen (replaces start_exp_video.mp4) + START button
+timeline.push({
+  type: 'html-keyboard-response',
+  stimulus:
+    '<div class="center">' +
+      '<img class="stim" src="' + FILES.startImage + '" alt="start experiment image" />' +
+      '<br />' +
+      '<button onclick="jsPsych.finishTrial()">START</button>' +
+    '</div>',
+  choices: jsPsych.NO_KEYS
+});
+
+// Experimental images (replace exp_video1/2/3.mp4)
+addExpBlock(FILES.exp1, false);
+addExpBlock(FILES.exp2, false);
+addExpBlock(FILES.exp3, true); // Final block – ends with KONIEC only
+
+// Start experiment
+jsPsych.init({ timeline: timeline });
+</script>
+</html>
+
